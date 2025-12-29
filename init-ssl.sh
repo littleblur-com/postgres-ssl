@@ -55,3 +55,28 @@ ssl_cert_file = '$SSL_SERVER_CRT'
 ssl_key_file = '$SSL_SERVER_KEY'
 ssl_ca_file = '$SSL_ROOT_CRT'
 EOF
+
+# PostgreSQL JSON logging configuration (requires PostgreSQL 15+)
+# logging_collector must be enabled to capture logs to files
+# A background tail process in wrapper.sh pipes these to stderr for Railway
+cat >> "$POSTGRES_CONF_FILE" <<EOF
+
+# JSON structured logging (piped to stderr by wrapper.sh for Railway)
+logging_collector = on
+log_destination = 'jsonlog'
+log_directory = 'log'
+log_filename = 'postgresql.json'
+log_rotation_age = 0
+log_rotation_size = 100MB
+log_truncate_on_rotation = on
+
+# Log useful information
+log_connections = on
+log_disconnections = on
+log_duration = off
+log_statement = 'ddl'
+log_min_duration_statement = 1000
+log_min_messages = 'warning'
+log_min_error_statement = 'error'
+log_timezone = 'UTC'
+EOF

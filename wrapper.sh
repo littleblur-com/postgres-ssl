@@ -60,6 +60,21 @@ unset PGHOST
 ## it ends up being empty
 unset PGPORT
 
+# JSON log file location (created by logging_collector)
+JSON_LOG_FILE="$PGDATA/log/postgresql.json"
+
+# Start a background process to tail JSON logs to stderr for Railway
+# Uses tail -F to follow by name (handles file rotation/recreation)
+# Runs in background so PostgreSQL can start normally
+(
+    # Wait for log directory and file to be created by PostgreSQL
+    while [ ! -f "$JSON_LOG_FILE" ]; do
+        sleep 1
+    done
+    # Tail the JSON log file to stderr for Railway log capture
+    exec tail -F "$JSON_LOG_FILE" >&2
+) &
+
 # Call the entrypoint script with the
 # appropriate PGHOST & PGPORT and redirect
 # the output to stdout if LOG_TO_STDOUT is true

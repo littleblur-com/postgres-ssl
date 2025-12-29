@@ -1,14 +1,70 @@
-# SSL-enabled Postgres DB image
+# SSL-enabled Postgres DB image with JSON Logging
 
-This repository contains the logic to build SSL-enabled Postgres images.
+This is a fork of [railwayapp-templates/postgres-ssl](https://github.com/railwayapp-templates/postgres-ssl) that adds **structured JSON logging** support (PostgreSQL 15+).
 
-By default, when you deploy Postgres from the official Postgres template on
-Railway, the image that is used is built from this repository!
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/postgres)
 
-[![Deploy on
-Railway](https://railway.app/button.svg)](https://railway.app/template/postgres)
+## What's Different in This Fork?
 
-### Why though?
+This fork adds JSON structured logging configuration to PostgreSQL (15+), making logs easier to parse and analyze. **Logs are automatically piped to stderr for Railway compatibility.**
+
+### How It Works
+
+1. PostgreSQL's `logging_collector` writes JSON logs to `$PGDATA/log/postgresql.json`
+2. A background `tail -F` process pipes the JSON log file to stderr
+3. Railway captures stderr and displays the structured JSON logs
+
+### JSON Logging Configuration
+
+The following settings are automatically applied:
+
+```ini
+logging_collector = on
+log_destination = 'jsonlog'
+log_directory = 'log'
+log_filename = 'postgresql.json'
+log_rotation_age = 0
+log_rotation_size = 100MB
+log_truncate_on_rotation = on
+
+log_connections = on
+log_disconnections = on
+log_duration = off
+log_statement = 'ddl'
+log_min_duration_statement = 1000
+log_min_messages = 'warning'
+log_min_error_statement = 'error'
+log_timezone = 'UTC'
+```
+
+### What Gets Logged
+
+| Setting | Effect |
+|---------|--------|
+| `log_connections = on` | Log each new connection |
+| `log_disconnections = on` | Log session terminations |
+| `log_statement = 'ddl'` | Log DDL statements (CREATE, ALTER, DROP) |
+| `log_min_duration_statement = 1000` | Log queries taking >1 second |
+| `log_min_messages = 'warning'` | Minimum severity for general logs |
+| `log_min_error_statement = 'error'` | Log SQL for errors and above |
+
+### JSON Log Output
+
+Each log entry is a JSON object with fields like:
+- `timestamp`, `pid`, `user`, `dbname`
+- `error_severity`, `message`, `detail`, `hint`
+- `statement`, `application_name`, `backend_type`
+
+Example log entry:
+```json
+{"timestamp":"2025-01-15 10:23:45.123 UTC","pid":1234,"user":"postgres","dbname":"mydb","error_severity":"LOG","message":"connection authorized: user=postgres database=mydb"}
+```
+
+---
+
+## Original README Content
+
+### Why SSL?
 
 The official Postgres image in Docker hub does not come with SSL baked in.
 
