@@ -24,7 +24,7 @@ log_destination = 'jsonlog'
 log_directory = 'log'
 log_filename = 'postgresql.json'
 log_rotation_age = 0
-log_rotation_size = 10MB
+log_rotation_size = 1MB
 log_truncate_on_rotation = on
 
 log_connections = on
