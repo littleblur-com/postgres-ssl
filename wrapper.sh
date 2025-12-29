@@ -63,6 +63,31 @@ unset PGPORT
 # JSON log file location (created by logging_collector)
 JSON_LOG_FILE="$PGDATA/log/postgresql.json"
 
+# Ensure JSON logging is configured in postgresql.conf (for existing databases)
+# init-ssl.sh only runs on first init, so we need to add config for existing DBs
+if [ -f "$POSTGRES_CONF_FILE" ] && ! grep -q "^logging_collector = on" "$POSTGRES_CONF_FILE"; then
+    echo "Adding JSON logging configuration to postgresql.conf..."
+    cat >> "$POSTGRES_CONF_FILE" <<'LOGGING_EOF'
+
+# JSON structured logging (added by wrapper.sh for Railway)
+logging_collector = on
+log_destination = 'jsonlog'
+log_directory = 'log'
+log_filename = 'postgresql.json'
+log_rotation_age = 0
+log_rotation_size = 1MB
+log_truncate_on_rotation = on
+log_connections = on
+log_disconnections = on
+log_duration = off
+log_statement = 'ddl'
+log_min_duration_statement = 1000
+log_min_messages = 'warning'
+log_min_error_statement = 'error'
+log_timezone = 'UTC'
+LOGGING_EOF
+fi
+
 # Start a background process to tail JSON logs to stderr for Railway
 # Uses tail -F to follow by name (handles file rotation/recreation)
 # Runs in background so PostgreSQL can start normally
