@@ -79,7 +79,20 @@ log_rotation_age = 0
 log_rotation_size = 1MB
 log_truncate_on_rotation = on
 log_min_duration_statement = 1000
+
+# Auto-disconnect idle sessions to allow serverless sleep
+idle_session_timeout = '10min'
 LOGGING_EOF
+fi
+
+# Add idle_session_timeout for existing databases that have logging but not timeout
+if [ -f "$POSTGRES_CONF_FILE" ] && ! grep -q "^idle_session_timeout" "$POSTGRES_CONF_FILE"; then
+    echo "Adding idle_session_timeout to postgresql.conf..."
+    cat >> "$POSTGRES_CONF_FILE" <<'IDLE_EOF'
+
+# Auto-disconnect idle sessions to allow serverless sleep (added by wrapper.sh)
+idle_session_timeout = '10min'
+IDLE_EOF
 fi
 
 # Clear old log file to start fresh (may contain old text-format logs)
