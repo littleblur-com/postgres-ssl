@@ -26,7 +26,7 @@ log_filename = 'postgresql'     # PostgreSQL appends .json automatically
 log_rotation_age = 0            # No time-based rotation
 log_rotation_size = 1MB         # Truncate at 1MB
 log_truncate_on_rotation = on   # Overwrite on rotation
-log_min_duration_statement = 1000  # Log queries taking >1 second
+log_min_duration_statement = 300   # Log queries taking >300ms
 ```
 
 ### JSON Log Output

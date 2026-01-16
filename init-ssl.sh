@@ -69,5 +69,5 @@ log_filename = 'postgresql'
 log_rotation_age = 0
 log_rotation_size = 1MB
 log_truncate_on_rotation = on
-log_min_duration_statement = 1000
+log_min_duration_statement = 300
 EOF
