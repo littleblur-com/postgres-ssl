@@ -49,7 +49,19 @@ if [ -f "$POSTGRES_CONF_FILE" ] && [ ! -f "$SSL_DIR/server.crt" ]; then
   bash "$INIT_SSL_SCRIPT"
 fi
 
-# Adds pg_stat_statements to shared_preload_libraries in a config file
+# Ensures a PostgreSQL setting exists in a config file.
+# Appends the setting if not already present; skips if found.
+# Usage: ensure_pg_setting <config_file> <setting_name> <value>
+ensure_pg_setting() {
+  local config_file="$1" setting="$2" value="$3"
+  if ! grep -q "^[[:space:]]*${setting}" "$config_file" 2>/dev/null; then
+    echo "Adding ${setting} to ${config_file}..."
+    echo "${setting} = ${value}" >> "$config_file"
+  fi
+}
+
+# Adds pg_stat_statements to shared_preload_libraries in a config file.
+# Preserves existing libraries instead of overwriting.
 # Usage: add_pg_stat_statements <config_file>
 add_pg_stat_statements() {
   local config_file="$1"
@@ -76,6 +88,18 @@ if [ -f "$POSTGRES_CONF_FILE" ] && ! grep -q "pg_stat_statements" "$POSTGRES_CON
   fi
 fi
 
+# Clean postgresql.auto.conf entries that conflict with our postgresql.conf settings.
+# ALTER SYSTEM writes to auto.conf which takes precedence over postgresql.conf,
+# so stale entries can silently override our intended configuration.
+if [ -f "$AUTO_CONF_FILE" ]; then
+  for setting in log_min_duration_statement idle_session_timeout logging_collector log_destination; do
+    if grep -q "^[[:space:]]*${setting}" "$AUTO_CONF_FILE" 2>/dev/null; then
+      echo "Removing stale ${setting} from postgresql.auto.conf (would override postgresql.conf)..."
+      sed -i "/^[[:space:]]*${setting}/d" "$AUTO_CONF_FILE"
+    fi
+  done
+fi
+
 # unset PGHOST to force psql to use Unix socket path
 # this is specific to Railway and allows
 # us to use PGHOST after the init
@@ -90,36 +114,18 @@ unset PGPORT
 # JSON log file location (created by logging_collector)
 JSON_LOG_FILE="$PGDATA/log/postgresql.json"
 
-# Ensure JSON logging is configured in postgresql.conf (for existing databases)
-# init-ssl.sh only runs on first init, so we need to add config for existing DBs
-# Check for our specific config marker (log_filename = 'postgresql' without .json)
-if [ -f "$POSTGRES_CONF_FILE" ] && ! grep -q "^log_filename = 'postgresql'$" "$POSTGRES_CONF_FILE"; then
-    echo "Adding JSON logging configuration to postgresql.conf..."
-    cat >> "$POSTGRES_CONF_FILE" <<'LOGGING_EOF'
-
-# JSON structured logging (added by wrapper.sh for Railway)
-logging_collector = on
-log_destination = 'jsonlog'
-log_directory = 'log'
-log_filename = 'postgresql'
-log_rotation_age = 0
-log_rotation_size = 1MB
-log_truncate_on_rotation = on
-log_min_duration_statement = 300
-
-# Auto-disconnect idle sessions to allow serverless sleep
-idle_session_timeout = '10min'
-LOGGING_EOF
-fi
-
-# Add idle_session_timeout for existing databases that have logging but not timeout
-if [ -f "$POSTGRES_CONF_FILE" ] && ! grep -q "^idle_session_timeout" "$POSTGRES_CONF_FILE"; then
-    echo "Adding idle_session_timeout to postgresql.conf..."
-    cat >> "$POSTGRES_CONF_FILE" <<'IDLE_EOF'
-
-# Auto-disconnect idle sessions to allow serverless sleep (added by wrapper.sh)
-idle_session_timeout = '10min'
-IDLE_EOF
+# Ensure all managed settings exist in postgresql.conf (for existing databases).
+# init-ssl.sh only runs on first init, so we retrofit settings here.
+if [ -f "$POSTGRES_CONF_FILE" ]; then
+    ensure_pg_setting "$POSTGRES_CONF_FILE" logging_collector on
+    ensure_pg_setting "$POSTGRES_CONF_FILE" log_destination "'jsonlog'"
+    ensure_pg_setting "$POSTGRES_CONF_FILE" log_directory "'log'"
+    ensure_pg_setting "$POSTGRES_CONF_FILE" log_filename "'postgresql'"
+    ensure_pg_setting "$POSTGRES_CONF_FILE" log_rotation_age 0
+    ensure_pg_setting "$POSTGRES_CONF_FILE" log_rotation_size 1MB
+    ensure_pg_setting "$POSTGRES_CONF_FILE" log_truncate_on_rotation on
+    ensure_pg_setting "$POSTGRES_CONF_FILE" log_min_duration_statement 300
+    ensure_pg_setting "$POSTGRES_CONF_FILE" idle_session_timeout "'10min'"
 fi
 
 # Clear old log file to start fresh (may contain old text-format logs)
