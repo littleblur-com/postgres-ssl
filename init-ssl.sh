@@ -54,6 +54,7 @@ ssl = on
 ssl_cert_file = '$SSL_SERVER_CRT'
 ssl_key_file = '$SSL_SERVER_KEY'
 ssl_ca_file = '$SSL_ROOT_CRT'
+shared_preload_libraries = 'pg_stat_statements'
 EOF
 
 # PostgreSQL JSON logging configuration (requires PostgreSQL 15+)
@@ -70,8 +71,4 @@ log_rotation_age = 0
 log_rotation_size = 1MB
 log_truncate_on_rotation = on
 log_min_duration_statement = 300
-
-# Query performance monitoring
-shared_preload_libraries = 'pg_stat_statements'
-pg_stat_statements.track = all
 EOF
