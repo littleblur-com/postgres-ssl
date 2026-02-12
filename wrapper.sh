@@ -95,17 +95,6 @@ idle_session_timeout = '10min'
 IDLE_EOF
 fi
 
-# Add pg_stat_statements for query performance monitoring
-if [ -f "$POSTGRES_CONF_FILE" ] && ! grep -q "^shared_preload_libraries" "$POSTGRES_CONF_FILE"; then
-    echo "Adding pg_stat_statements to postgresql.conf..."
-    cat >> "$POSTGRES_CONF_FILE" <<'PGSS_EOF'
-
-# Query performance monitoring (added by wrapper.sh)
-shared_preload_libraries = 'pg_stat_statements'
-pg_stat_statements.track = all
-PGSS_EOF
-fi
-
 # Clear old log file to start fresh (may contain old text-format logs)
 if [ -f "$JSON_LOG_FILE" ]; then
     echo "Clearing old log file for fresh JSON logging..."
@@ -128,15 +117,6 @@ while [ ! -f "$JSON_LOG_FILE" ]; do
     fi
     sleep 1
 done
-
-# Create pg_stat_statements extension once postgres is accepting connections
-(
-    until pg_isready -q 2>/dev/null; do sleep 1; done
-    psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-        -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;" 2>/dev/null \
-        && echo "pg_stat_statements extension ready" \
-        || echo "pg_stat_statements extension creation failed"
-) &
 
 echo "Tailing JSON logs from $JSON_LOG_FILE"
 
