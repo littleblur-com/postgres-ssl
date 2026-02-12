@@ -70,4 +70,8 @@ log_rotation_age = 0
 log_rotation_size = 1MB
 log_truncate_on_rotation = on
 log_min_duration_statement = 300
+
+# Query performance monitoring
+shared_preload_libraries = 'pg_stat_statements'
+pg_stat_statements.track = all
 EOF
