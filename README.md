@@ -2,11 +2,17 @@
 
 This is a fork of [railwayapp-templates/postgres-ssl](https://github.com/railwayapp-templates/postgres-ssl) that adds **structured JSON logging** support (PostgreSQL 15+).
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/postgres)
+## It's a bad idea!
+
+Yes, this is AI slop! I don't know what I'm doing.
+
+Annnnd I'm sure the reason railway hasn't done this for everyone already, is that it's janky. Since postgres doesn't natively support streaming structured logs to stdout or stderr (I think?) I wrap the whole thing in a .sh script that tails the log files to stderr. This means a couple unstructured logs still get through at startup, and if my shell script is dumb, you crash or you're pwned.
+
+But, in my experience, no disasters yet? 🤞
 
 ## What's Different in This Fork?
 
-This fork adds JSON structured logging configuration to PostgreSQL (15+), making logs easier to parse and analyze. **Logs are automatically piped to stderr for Railway compatibility.**
+This fork adds JSON structured logging configuration to PostgreSQL (15+), making logs easier to parse and analyze. Logs are automatically piped to stderr for Railway compatibility.
 
 ### How It Works
 
